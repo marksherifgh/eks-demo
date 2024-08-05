@@ -38,3 +38,24 @@ resource "aws_eks_cluster" "demo" {
 
   depends_on = [aws_iam_role_policy_attachment.demo_amazon_eks_cluster_policy]
 }
+
+data "tls_certificate" "demo" {
+ url = aws_eks_cluster.demo.identity.0.oidc.0.issuer
+}
+
+resource "aws_iam_openid_connect_provider" eks_oidc_provider {
+ client_id_list = ["sts.amazonaws.com"]
+ thumbprint_list = [data.tls_certificate.demo.certificates[0].sha1_fingerprint]
+ url = aws_eks_cluster.demo.identity.0.oidc.0.issuer
+ 
+}
+
+resource "aws_eks_identity_provider_config" "demo" {
+  cluster_name = aws_eks_cluster.demo.name
+  oidc {
+    client_id = "${substr(aws_eks_cluster.demo.identity.0.oidc.0.issuer, -32, -1)}"
+    identity_provider_config_name = "demo"
+    issuer_url = "https://${aws_iam_openid_connect_provider.eks_oidc_provider.url}"
+  }
+}
+
