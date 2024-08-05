@@ -59,3 +59,18 @@ resource "aws_eks_identity_provider_config" "demo" {
   }
 }
 
+module "cluster_autoscaler_irsa_role" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "5.30.1"
+
+  role_name                        = "cluster-autoscaler"
+  attach_cluster_autoscaler_policy = true
+  cluster_autoscaler_cluster_ids   = [aws_eks_cluster.demo.name]
+
+  oidc_providers = {
+    ex = {
+      provider_arn               = aws_iam_openid_connect_provider.eks_oidc_provider.arn
+      namespace_service_accounts = ["kube-system:cluster-autoscaler"]
+    }
+  }
+}
